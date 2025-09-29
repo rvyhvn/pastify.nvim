@@ -1,6 +1,6 @@
 from .type import Config
 from .validate import validate_config
-from PIL import ImageGrab
+from PIL import ImageGrab, Image
 from asyncio import create_task, create_subprocess_shell, subprocess
 from codecs import encode, decode
 from io import BytesIO
@@ -133,12 +133,17 @@ class Pastify(object):
             else:
                 vim.command(f"normal! i{pattern}")
 
-    async def get_image(self, base64_text: str, placeholder_text: str) -> None:
+    async def get_image(self, img: Image.Image, placeholder_text: str):
         import re
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            img.save(tmp, "PNG")
+            tmp_path = tmp.name
 
         curl_command = f'curl --location --request POST \
-                "https://api.imgbb.com/1/upload?key={self.config["opts"]["apikey"]}"\
-                --form "image={base64_text}"'
+            "https://api.imgbb.com/1/upload?key={self.config["opts"]["apikey"]}" \
+            --form "image=@{tmp_path}"'
 
         process = await create_subprocess_shell(
             curl_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
